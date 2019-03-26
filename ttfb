@@ -1,0 +1,118 @@
+#!/bin/bash
+#
+# Based on a gist https://gist.github.com/sandeepraju/1f5fbdbdd89551ba7925abe2645f92b5
+# by https://github.com/sandeepraju
+#
+# Modified by jay@gooby.org, @jaygooby
+#
+# Usage: ttfb [options] url [url...]
+#   -d debug
+#   -l <log file> (infers -d)
+#   -n number of times to test
+#
+# Examples:
+#
+# ttfb example.com
+# DNS lookup: 0.523402 TLS handshake: 0.000000 TTFB including connection: 0.692724 TTFB: .692724 Total time: 0.693508
+#
+# ttfb -n 5 example.com
+# min .203970 max .181486 median .190033
+#
+# ttfb -n 5 bbc.co.uk news.bbc.co.uk
+# bbc.co.uk       min .032791 max .039401 median .029214
+# news.bbc.co.uk  min .032927 max .032237 median .037458
+#
+# ttfb bbc.co.uk news.bbc.co.uk
+# bbc.co.uk        DNS lookup: 0.005291 TLS handshake: 0.089403 TTFB including connection: 0.119651 TTFB: .030248 Total time: 0.506010
+# news.bbc.co.uk   DNS lookup: 0.004266 TLS handshake: 0.077179 TTFB including connection: 0.110649 TTFB: .033470 Total time: 0.598472
+#
+# Implicitly follows redirects using curl's -L
+#
+# Log all response headers (default log file is curl.log) by calling with -d
+#
+# Override the default log file by specifying -l /some/file
+#
+# Get min, max and median values by specifying the number of times to call
+# the URL (-n2 etc)
+#
+# If you specify more than one url and have specified -d or -l the log file
+# will be prefixed with the URL being requested.
+#
+# See https://blog.cloudflare.com/a-question-of-timing/
+# and https://curl.haxx.se/docs/manpage.html for an explanation
+# of how the curl variables relate to the various stages of
+# the transfer.
+#
+# To get a better approximation of devtool's TTFB, consider
+# the time without the connection overhead:
+# %{time_starttransfer} - %{time_appconnect}
+#
+# Uses a dirty eval to do the ttfb arithmetic. Depends
+# on bc and column commands.
+
+while getopts ":n:dl:" OPTION
+do
+    case $OPTION in
+        d) DEBUG=1 ;;
+        l) LOG="$OPTARG" ;;
+        n) NUM_REQUESTS=$OPTARG ;;
+        \?) echo -e "tfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d)\n\t-n number of times to test the url" >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND - 1))  # shifts away every option argument,
+                       # leaving urls as $@
+
+if [ -z "$1" ]; then
+  echo "You didn't specify any urls to fetch"
+  exit 1
+else
+  URLS="$@"
+fi
+
+# if we're given a custom log file, implicitly set DEBUG=1
+[ -n "$LOG" ] && DEBUG=1
+
+# default the log file to curl.log in pwd
+LOG="${LOG:-curl.log}"
+DEBUG=${DEBUG:-0}
+
+options=()
+options+=(-o /dev/null)
+options+=(-s)
+options+=(-L)
+options+=(--http2)
+options+=(-H 'Cache-Control: no-cache')
+options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
+if [ $DEBUG -eq 1 ]; then
+  options+=(-D ${LOG})
+fi
+
+for URL in $URLS; do
+
+  # if we're checking more than one url, and debug is set, then log
+  # the headers to a per-url file
+  if [[ ${#@} -gt 1 && $DEBUG -eq 1 ]]; then
+    LOGFILE="${URL//[^[:alnum:]]/_}"
+    options+=(-D "${LOGFILE}-${LOG}")
+  fi
+
+  # if we're checking more than one url
+  # output it on the results line
+  if [ ${#@} -gt 1 ]; then
+    SHOW_URL="${URL}|"
+  fi
+
+  # if multiple requests have been specified, then show min, max & median values
+  if [[ -n "$NUM_REQUESTS" && "$NUM_REQUESTS" -gt 1 ]]; then
+    times=()
+    for i in $(seq $NUM_REQUESTS); do
+      times+=($(eval $(curl "${options[@]}" "$URL") | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2 | sort -n));
+    done
+    printf "$SHOW_URL\e[32mmin \e[39m${times[0]} \e[91mmax \e[39m${times[${#times[*]}-1]} \e[95mmedian \e[39m${times[${#times[*]}/2]}\e[39m\n";
+  else
+   echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL"))
+  fi
+done | column -s'|' -t
