@@ -37,7 +37,7 @@ Examples:
 
 ```
 $ ttfb example.com
-DNS lookup: 0.523402 TLS handshake: 0.000000 TTFB including connection: 692724 TTFB: .692724 Total time: 0.693508
+DNS lookup: 0.523402 TLS handshake: 0.000000 TTFB including connection: 0.692724 TTFB: .692724 Total time: 0.693508
 ```
 
 ```
@@ -94,6 +94,6 @@ on `bc` and `column` commands.
 
 # TODO
 
-  * [ ] Sort output by fasted TTFB when multiple URLs are supplied
+  * [ ] Sort output by fastest TTFB when multiple URLs are supplied
 
   * [ ] Colour code the `TTFB:` figure in the standard response, according to the speed of the response.
