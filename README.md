@@ -1,7 +1,30 @@
+# Introduction
+
+Measures [time-to-first-byte](https://en.wikipedia.org/wiki/Time_to_first_byte) for single or multiple URLs. Can calculate min, max & median TTFB values and log all response headers.
+
+```
+Usage: ttfb [options] url [url...]
+  -d debug
+  -l <log file> (infers -d)
+  -n number of times to test
+```
+
+Uses the calculation `%{time_starttransfer¹} - %{time_appconnect²}` which doesn't include any connection overhead, to better approximate devtool’s TTFB figure.
+
+¹ [`time_starttransfer`](https://github.com/curl/curl/blob/e431daf013ea04cb1a988a2009d820224ef5fb79/docs/cmdline-opts/write-out.d#L141-L144)
+> The time, in seconds, it took from the start until the first byte was just about to be transferred. This includes time_pretransfer and also the time the server needed to calculate the result.</blockquote>
+
+² [`time_appconnect`](https://github.com/curl/curl/blob/e431daf013ea04cb1a988a2009d820224ef5fb79/docs/cmdline-opts/write-out.d#L118-L120)
+>The time, in seconds, it took from the start until the SSL/SSH/etc
+connect/handshake to the remote host was completed.
+
+# Genesis
 Based on a gist https://gist.github.com/sandeepraju/1f5fbdbdd89551ba7925abe2645f92b5
 by https://github.com/sandeepraju
 
 Modified by jay@gooby.org, [@jaygooby](https://twitter.com/jaygooby)
+
+# Usage
 
 ```
 Usage: ttfb [options] url [url...]
@@ -30,8 +53,8 @@ news.bbc.co.uk  min .032927 max .032237 median .037458
 
 ```
 $ ttfb bbc.co.uk news.bbc.co.uk
-bbc.co.uk        DNS lookup: 0.005291 TLS handshake: 0.089403 TTFB including nnection: 0.119651 TTFB: .030248 Total time: 0.506010
-news.bbc.co.uk   DNS lookup: 0.004266 TLS handshake: 0.077179 TTFB including nnection: 0.110649 TTFB: .033470 Total time: 0.598472
+bbc.co.uk        DNS lookup: 0.005291 TLS handshake: 0.089403 TTFB including connection: 0.119651 TTFB: .030248 Total time: 0.506010
+news.bbc.co.uk   DNS lookup: 0.004266 TLS handshake: 0.077179 TTFB including connection: 0.110649 TTFB: .033470 Total time: 0.598472
 ```
 
 Implicitly follows redirects using curl's `-L`
@@ -62,9 +85,15 @@ the transfer.
 
 ![Diagram showing what each of the curl variable timings refer to against a typical HTTP over TLS 1.2 connection](https://blog.cloudflare.com/content/images/2018/10/Screen-Shot-2018-10-16-at-14.51.29-1.png)
 
-To get a better approximation of devtool's TTFB, consider
+To get a better approximation of devtool's TTFB, we consider
 the time without the connection overhead:
 `%{time_starttransfer} - %{time_appconnect}`
 
 Uses a dirty `eval` to do the ttfb arithmetic. Depends
 on `bc` and `column` commands.
+
+# TODO
+
+  * [ ] Sort output by fasted TTFB when multiple URLs are supplied
+
+  * [ ] Colour code the `TTFB:` figure in the standard response, according to the speed of the response.
