@@ -1,5 +1,3 @@
-/bin/bash
-
 Based on a gist https://gist.github.com/sandeepraju/5fbdbdd89551ba7925abe2645f92b5
 by https://github.com/sandeepraju
 
