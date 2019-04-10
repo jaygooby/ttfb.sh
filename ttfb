@@ -68,6 +68,7 @@ median() {
 
 DEBUG=""
 LOG=""
+NUM_REQUESTS=0
 
 while getopts ":n:dl:" OPTION
 do
