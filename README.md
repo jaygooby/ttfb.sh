@@ -42,13 +42,16 @@ DNS lookup: 0.523402 TLS handshake: 0.000000 TTFB including connection: 0.692724
 
 ```
 $ ttfb -n 5 example.com
-min .203970 max .181486 median .190033
+.....
+fastest .177263 slowest .214302 median .179957
 ```
 
 ```
 $ ttfb -n 5 bbc.co.uk news.bbc.co.uk
-bbc.co.uk       min .032791 max .039401 median .029214
-news.bbc.co.uk  min .032927 max .032237 median .037458
+.....
+.....
+bbc.co.uk       fastest .030936 slowest .057755 median .034663
+news.bbc.co.uk  fastest .031413 slowest .182791 median .035001
 ```
 
 ```
@@ -93,6 +96,8 @@ Uses a dirty `eval` to do the ttfb arithmetic. Depends
 on `bc` and `column` commands.
 
 # TODO
+
+  * [x] Show progress when more than one request (`-n 2` etc) option is set
 
   * [ ] Sort output by fastest TTFB when multiple URLs are supplied
 
