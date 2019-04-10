@@ -49,6 +49,25 @@
 #
 # Uses a dirty eval to do the ttfb arithmetic. Depends
 # on bc and column commands.
+set -eu
+
+# Cribbed from https://stackoverflow.com/a/41762669/391826
+median() {
+  arr=($(printf '%s\n' "${@}" | sort -n))
+  nel=${#arr[@]}
+  if (( $nel % 2 == 1 )); then     # Odd number of elements
+    val="${arr[ $(($nel/2)) ]}"
+  else                            # Even number of elements
+    (( j=nel/2 ))
+    (( k=j-1 ))
+    # (( val=(${arr[j]} + ${arr[k]})/2 ))
+    val=$(echo "scale=6;(${arr[j]}" + "${arr[k]})"/2|bc -l)
+  fi
+  echo $val
+}
+
+DEBUG=""
+LOG=""
 
 while getopts ":n:dl:" OPTION
 do
@@ -103,15 +122,22 @@ for URL in $URLS; do
   # output it on the results line
   if [ ${#@} -gt 1 ]; then
     SHOW_URL="${URL}|"
+  else
+    SHOW_URL=""
   fi
 
   # if multiple requests have been specified, then show min, max & median values
   if [[ -n "$NUM_REQUESTS" && "$NUM_REQUESTS" -gt 1 ]]; then
     times=()
     for i in $(seq $NUM_REQUESTS); do
+      printf "." >&2
       times+=($(eval $(curl "${options[@]}" "$URL") | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2 | sort -n));
     done
-    printf "$SHOW_URL\e[32mmin \e[39m${times[0]} \e[91mmax \e[39m${times[${#times[*]}-1]} \e[95mmedian \e[39m${times[${#times[*]}/2]}\e[39m\n";
+    printf "\n" >&2
+    # sort the times
+    times=( $( printf "%s\n" "${times[@]}" | sort -n ) )
+    # show quickest, slowest and median fftb
+    printf "${SHOW_URL}\e[32mfastest \e[39m${times[0]} \e[91mslowest \e[39m${times[${#times[*]}-1]} \e[95mmedian \e[39m$(median ${times[*]})\e[39m\n";
   else
    echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL"))
   fi
