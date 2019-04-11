@@ -7,8 +7,9 @@
 #
 # Usage: ttfb [options] url [url...]
 #   -d debug
-#   -l <log file> (infers -d)
-#   -n number of times to test
+#   -l <log file> (infers -d) log response headers. Defaults to ./curl.log
+#   -n <number> of times to test time to first byte
+#   -v verbose output. Show request breakdown during -n calls
 #
 # Examples:
 #
@@ -28,7 +29,7 @@
 #
 # Implicitly follows redirects using curl's -L
 #
-# Log all response headers (default log file is curl.log) by calling with -d
+# Log all response headers (default log file is ./curl.log) by calling with -d
 #
 # Override the default log file by specifying -l /some/file
 #
@@ -37,6 +38,9 @@
 #
 # If you specify more than one url and have specified -d or -l the log file
 # will be prefixed with the URL being requested.
+#
+# If you specify -n and -d or -l, the response headers from the consecutive
+# requests will be concatenated in the log file.
 #
 # See https://blog.cloudflare.com/a-question-of-timing/
 # and https://curl.haxx.se/docs/manpage.html for an explanation
@@ -66,17 +70,26 @@ median() {
   echo $val
 }
 
+# defaults
 DEBUG=""
 LOG=""
 NUM_REQUESTS=0
+VERBOSE=0
 
-while getopts ":n:dl:" OPTION
+while getopts ":n:dl:o:v" OPTION
 do
     case $OPTION in
         d) DEBUG=1 ;;
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
-        \?) echo -e "tfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d)\n\t-n number of times to test the url" >&2
+        o) LOG_DIRECTORY="$OPTARG"
+           if [ ! -d "$LOG_DIRECTORY" ]; then
+              echo "Log directory $LOG_DIRECTORY doesn't exist" >&2
+              exit 1;
+           fi
+           ;;
+        v) VERBOSE=1 ;;
+        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to curl.log\n\t-n <number> of times to test time to first byte\n\t-o <log directory> (infers -l) where header logs are saved\n\t-v verbose output. Show request breakdown during -n calls" >&2
             exit 1
             ;;
     esac
@@ -92,10 +105,11 @@ else
   URLS="$@"
 fi
 
-# if we're given a custom log file, implicitly set DEBUG=1
-[ -n "$LOG" ] && DEBUG=1
+# if we're given a custom log file, or log directory, implicitly set DEBUG=1
+([ -n "$LOG" ] || [ -n "$LOG_DIRECTORY" ]) && DEBUG=1
 
-# default the log file to curl.log in pwd
+# default the log file to curl.log in pwd or LOG_DIRECTORY if -o was specified
+LOG_DIRECTORY="${LOG_DIRECTORY:-.}"
 LOG="${LOG:-curl.log}"
 DEBUG=${DEBUG:-0}
 
@@ -107,38 +121,61 @@ options+=(--http2)
 options+=(-H 'Cache-Control: no-cache')
 options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
 if [ $DEBUG -eq 1 ]; then
-  options+=(-D ${LOG})
+  options+=(-D "${LOG_DIRECTORY}/${LOG}")
 fi
 
 for URL in $URLS; do
 
-  # if we're checking more than one url, and debug is set, then log
-  # the headers to a per-url file
-  if [[ ${#@} -gt 1 && $DEBUG -eq 1 ]]; then
-    LOGFILE="${URL//[^[:alnum:]]/_}"
-    options+=(-D "${LOGFILE}-${LOG}")
-  fi
-
   # if we're checking more than one url
-  # output it on the results line
+  # output the url on the results line
   if [ ${#@} -gt 1 ]; then
     SHOW_URL="${URL}|"
+    if [ $VERBOSE -eq 1 ]; then
+      echo $URL >&2
+    fi
   else
     SHOW_URL=""
   fi
 
   # if multiple requests have been specified, then show min, max & median values
   if [[ -n "$NUM_REQUESTS" && "$NUM_REQUESTS" -gt 1 ]]; then
-    times=()
+    ttfbs=()
     for i in $(seq $NUM_REQUESTS); do
-      printf "." >&2
-      times+=($(eval $(curl "${options[@]}" "$URL") | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2 | sort -n));
+
+      # if we're checking more than one url, and debug is set, then log
+      # the headers to a per-url file, but also for each request
+      if [[ ${#@} -gt 1 && $DEBUG -eq 1 ]]; then
+        LOGFILE="${URL//[^[:alnum:]]/_}"
+        options+=(-D "${LOG_DIRECTORY}/${LOGFILE}-${LOG}_${i}")
+      elif [ $DEBUG -eq 1 ]; then
+        # we only have the one URL, but we still are requesting multiple
+        # ttfb calls, so log the headers
+        options+=(-D "${LOG_DIRECTORY}/${LOG}_${i}")
+      fi
+
+      request=$(eval $(curl "${options[@]}" "$URL"))
+      ttfbs+=($(echo $request | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2 | sort -n));
+      if [ $VERBOSE -eq 1 ]; then
+        echo "$request" >&2
+      else
+        printf "." >&2
+      fi
     done
+
+    # tidy up - combine multiple request logs for the same url into a single file
+    if [[ ${#@} -gt 1 && $DEBUG -eq 1 ]]; then
+      cat "${LOG_DIRECTORY}/${LOGFILE}-${LOG}_"* > "${LOG_DIRECTORY}/${LOGFILE}-${LOG}"
+      rm "${LOG_DIRECTORY}/${LOGFILE}-${LOG}_"*
+    elif [ $DEBUG -eq 1 ]; then
+      cat "${LOG_DIRECTORY}/${LOG}_"* > "${LOG_DIRECTORY}/${LOG}"
+      rm "${LOG_DIRECTORY}/${LOG}_"*
+    fi
+
     printf "\n" >&2
     # sort the times
-    times=( $( printf "%s\n" "${times[@]}" | sort -n ) )
+    ttfbs=( $( printf "%s\n" "${ttfbs[@]}" | sort -n ) )
     # show quickest, slowest and median fftb
-    printf "${SHOW_URL}\e[32mfastest \e[39m${times[0]} \e[91mslowest \e[39m${times[${#times[*]}-1]} \e[95mmedian \e[39m$(median ${times[*]})\e[39m\n";
+    printf "${SHOW_URL}\e[32mfastest \e[39m${ttfbs[0]} \e[91mslowest \e[39m${ttfbs[${#ttfbs[*]}-1]} \e[95mmedian \e[39m$(median ${ttfbs[*]})\e[39m\n";
   else
    echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL"))
   fi
