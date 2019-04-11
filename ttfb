@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# Shows time in seconds to first byte of a url or urls
+#
 # Based on a gist https://gist.github.com/sandeepraju/1f5fbdbdd89551ba7925abe2645f92b5
 # by https://github.com/sandeepraju
 #
@@ -13,30 +15,33 @@
 #
 # Examples:
 #
-# ttfb example.com
-# DNS lookup: 0.523402 TLS handshake: 0.000000 TTFB including connection: 0.692724 TTFB: .692724 Total time: 0.693508
+# ttfb https://example.com/example/url
+# .098974
 #
-# ttfb -n 5 example.com
-# min .203970 max .181486 median .190033
+# ttfb -n 5 https://example.com/
+# .....
+# fastest .099195 slowest .103138 median .099684
 #
 # ttfb -n 5 bbc.co.uk news.bbc.co.uk
-# bbc.co.uk       min .032791 max .039401 median .029214
-# news.bbc.co.uk  min .032927 max .032237 median .037458
+# .....
+# .....
+# bbc.co.uk       fastest .045873 slowest .046870 median .045999
+# news.bbc.co.uk  fastest .042286 slowest .060245 median .046035
 #
 # ttfb bbc.co.uk news.bbc.co.uk
-# bbc.co.uk        DNS lookup: 0.005291 TLS handshake: 0.089403 TTFB including connection: 0.119651 TTFB: .030248 Total time: 0.506010
-# news.bbc.co.uk   DNS lookup: 0.004266 TLS handshake: 0.077179 TTFB including connection: 0.110649 TTFB: .033470 Total time: 0.598472
+# bbc.co.uk        .048378
+# news.bbc.co.uk   .049303
 #
-# Implicitly follows redirects using curl's -L
+# Implicitly follows redirects using curl's -L option.
 #
 # Log all response headers (default log file is ./curl.log) by calling with -d
 #
 # Override the default log file by specifying -l /some/file
 #
 # Get min, max and median values by specifying the number of times to call
-# the URL (-n2 etc)
+# the URL; use -n2 for 2 tests, -n5 for 5 and so on.
 #
-# If you specify more than one url and have specified -d or -l the log file
+# If you specify more than one url and have specified -d or -l, the log file
 # will be prefixed with the URL being requested.
 #
 # If you specify -n and -d or -l, the response headers from the consecutive
@@ -55,6 +60,11 @@
 # on bc and column commands.
 set -eu
 
+# check dependencies
+for dependency in curl bc column; do
+  which -s $dependency || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
+done
+
 # Cribbed from https://stackoverflow.com/a/41762669/391826
 median() {
   arr=($(printf '%s\n' "${@}" | sort -n))
@@ -64,7 +74,6 @@ median() {
   else                            # Even number of elements
     (( j=nel/2 ))
     (( k=j-1 ))
-    # (( val=(${arr[j]} + ${arr[k]})/2 ))
     val=$(echo "scale=6;(${arr[j]}" + "${arr[k]})"/2|bc -l)
   fi
   echo $val
@@ -83,7 +92,7 @@ do
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
         v) VERBOSE=1 ;;
-        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show request breakdown during -n calls" >&2
+        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to ./curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)" >&2
             exit 1
             ;;
     esac
@@ -100,7 +109,7 @@ else
 fi
 
 # if we're given a custom log file, or log directory, implicitly set DEBUG=1
-([ -n "$LOG" ] || [ -n "$LOG_DIRECTORY" ]) && DEBUG=1
+[ -n "$LOG" ] && DEBUG=1
 
 # default the log file to curl.log in pwd or LOG_DIRECTORY if -o was specified
 LOG="${LOG:-curl.log}"
@@ -135,7 +144,7 @@ for URL in $URLS; do
   # output the url on the results line
   if [ ${#@} -gt 1 ]; then
     SHOW_URL="${URL}|"
-    if [ $VERBOSE -eq 1 ]; then
+    if [[ $VERBOSE -eq 1 && -n "$NUM_REQUESTS" && "$NUM_REQUESTS" -gt 1 ]]; then
       echo $URL >&2
     fi
   else
@@ -182,6 +191,10 @@ for URL in $URLS; do
     # show quickest, slowest and median fftb
     printf "${SHOW_URL}\e[32mfastest \e[39m${ttfbs[0]} \e[91mslowest \e[39m${ttfbs[${#ttfbs[*]}-1]} \e[95mmedian \e[39m$(median ${ttfbs[*]})\e[39m\n";
   else
-   echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL"))
+   if [ $VERBOSE -eq 1 ]; then
+     echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL"))
+   else
+     echo -e $SHOW_URL $(eval $(curl "${options[@]}" "$URL") | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2)
+   fi
   fi
 done | column -s'|' -t
