@@ -76,20 +76,14 @@ LOG=""
 NUM_REQUESTS=0
 VERBOSE=0
 
-while getopts ":n:dl:o:v" OPTION
+while getopts ":n:dl:v" OPTION
 do
     case $OPTION in
         d) DEBUG=1 ;;
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
-        o) LOG_DIRECTORY="$OPTARG"
-           if [ ! -d "$LOG_DIRECTORY" ]; then
-              echo "Log directory $LOG_DIRECTORY doesn't exist" >&2
-              exit 1;
-           fi
-           ;;
         v) VERBOSE=1 ;;
-        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to curl.log\n\t-n <number> of times to test time to first byte\n\t-o <log directory> (infers -l) where header logs are saved\n\t-v verbose output. Show request breakdown during -n calls" >&2
+        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show request breakdown during -n calls" >&2
             exit 1
             ;;
     esac
@@ -109,8 +103,19 @@ fi
 ([ -n "$LOG" ] || [ -n "$LOG_DIRECTORY" ]) && DEBUG=1
 
 # default the log file to curl.log in pwd or LOG_DIRECTORY if -o was specified
-LOG_DIRECTORY="${LOG_DIRECTORY:-.}"
 LOG="${LOG:-curl.log}"
+
+# now work out if $LOG is relative or an absolute path
+# and then get the dirname
+[ "$LOG" != "${LOG#/}" ] && LOG_DIRECTORY=$(dirname "$LOG") || LOG_DIRECTORY=$(dirname "${PWD}/$LOG")
+if [ ! -d "$LOG_DIRECTORY" ]; then
+   echo "Log directory $LOG_DIRECTORY doesn't exist" >&2
+   exit 1;
+fi
+
+# then set the actual log filename
+LOG=$(basename "$LOG")
+
 DEBUG=${DEBUG:-0}
 
 options=()
