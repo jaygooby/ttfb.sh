@@ -62,7 +62,7 @@ set -eu
 
 # check dependencies
 for dependency in curl bc column; do
-  which -s $dependency || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
+  which $dependency > /dev/null || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
 done
 
 # Cribbed from https://stackoverflow.com/a/41762669/391826
