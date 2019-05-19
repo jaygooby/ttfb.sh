@@ -65,6 +65,10 @@ for dependency in curl bc column; do
   which $dependency > /dev/null || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
 done
 
+# check curl can use http2
+HTTP_VERSION="--http2"
+curl -so /dev/null --http2 https://example.com || HTTP_VERSION="--http1.1"
+
 # Cribbed from https://stackoverflow.com/a/41762669/391826
 median() {
   arr=($(printf '%s\n' "${@}" | sort -n))
@@ -131,7 +135,7 @@ options=()
 options+=(-o /dev/null)
 options+=(-s)
 options+=(-L)
-options+=(--http2)
+options+=($HTTP_VERSION)
 options+=(-H 'Cache-Control: no-cache')
 options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
 if [ $DEBUG -eq 1 ]; then
