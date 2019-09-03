@@ -160,6 +160,9 @@ for URL in $URLS; do
     ttfbs=()
     for i in $(seq $NUM_REQUESTS); do
 
+      CACHE_PARAM_VALUE=$(cat /dev/random | LC_CTYPE=C tr -dc "[:alpha:]" | head -c 32)
+      UNCACHED_URL="${URL}?plsdontcache=${CACHE_PARAM_VALUE}"
+
       # if we're checking more than one url, and debug is set, then log
       # the headers to a per-url file, but also for each request
       if [[ ${#@} -gt 1 && $DEBUG -eq 1 ]]; then
@@ -171,10 +174,10 @@ for URL in $URLS; do
         options+=(-D "${LOG_DIRECTORY}/${LOG}_${i}")
       fi
 
-      request=$(eval $(curl "${options[@]}" "$URL"))
+      request=$(eval $(curl "${options[@]}" "$UNCACHED_URL"))
       ttfbs+=($(echo $request | grep -oE "TTFB: .{0,7}" | cut -d' ' -f2 | sort -n));
       if [ $VERBOSE -eq 1 ]; then
-        echo "$request" >&2
+        echo "$UNCACHED_URL: $request" >&2
       else
         printf "." >&2
       fi
