@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Shows time in seconds to first byte of a url or urls
 #
@@ -62,7 +62,7 @@ set -eu
 
 # check dependencies
 for dependency in curl bc column; do
-  which -s $dependency || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
+  which $dependency > /dev/null || (echo "You need to have '$dependency' installed and in your \$PATH" >&2 && exit 1)
 done
 
 # Ensure curl uses period separators for floating point values, which
@@ -72,6 +72,10 @@ if (locale -a | egrep ^C.UTF-8$); then
 else
   export LC_ALL=C
 fi
+
+# check curl can use http2
+HTTP_VERSION="--http2"
+curl -so /dev/null --http2 https://example.com || HTTP_VERSION="--http1.1"
 
 # Cribbed from https://stackoverflow.com/a/41762669/391826
 median() {
@@ -139,7 +143,7 @@ options=()
 options+=(-o /dev/null)
 options+=(-s)
 options+=(-L)
-options+=(--http2)
+options+=($HTTP_VERSION)
 options+=(-H 'Cache-Control: no-cache')
 options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
 if [ $DEBUG -eq 1 ]; then
