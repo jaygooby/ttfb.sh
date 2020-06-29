@@ -67,7 +67,7 @@ done
 
 # Ensure curl uses period separators for floating point values, which
 # bc requires to do calculations (i.e. it can't use locale separators like ,)
-if (locale -a | egrep ^C.UTF-8$); then
+if (locale -a | egrep ^C.UTF-8$ > /dev/null); then
   export LC_ALL=C.UTF-8
 else
   export LC_ALL=C
