@@ -91,6 +91,10 @@ median() {
   echo $val
 }
 
+show_usage() {
+  echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to ./curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)" >&2
+}
+
 # defaults
 DEBUG=""
 LOG=""
@@ -104,7 +108,7 @@ do
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
         v) VERBOSE=1 ;;
-        \?) echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to ./curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)" >&2
+        \?) show_usage
             exit 1
             ;;
     esac
@@ -113,8 +117,8 @@ done
 shift $((OPTIND - 1))  # shifts away every option argument,
                        # leaving urls as $@
 
-if [ -z "$1" ]; then
-  echo "You didn't specify any urls to fetch"
+if [ -z "${1:-}" ]; then
+  show_usage
   exit 1
 else
   URLS="$@"
