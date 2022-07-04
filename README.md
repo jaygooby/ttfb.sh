@@ -165,6 +165,14 @@ the time without the connection overhead:
 Uses a dirty `eval` to do the ttfb arithmetic. Depends
 on `bc` and `column` commands.
 
+# Testing
+
+If you'd like to submit a [PR](https://github.com/jaygooby/ttfb.sh/pulls), please add a test in the [test suite](https://github.com/jaygooby/ttfb.sh/blob/master/tests/tests.bats).
+
+To run the tests, call `make` from the project root. You'll need to have [bats-core](https://github.com/bats-core/bats-core) installed and in your `$PATH`.
+
+If you only want to run a test or two, uncomment the `# skip` lines, so they read `skip` and then those tests will be skipped.
+
 # TODO
 
   * [x] Show progress when more than one request (`-n 2` etc) option is set
