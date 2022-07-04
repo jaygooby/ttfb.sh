@@ -100,13 +100,15 @@ DEBUG=""
 LOG=""
 NUM_REQUESTS=0
 VERBOSE=0
+options=()
 
-while getopts ":n:dl:v" OPTION
+while getopts "dl:n:o:v" OPTION
 do
     case $OPTION in
         d) DEBUG=1 ;;
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
+        o) options+=("$(echo $OPTARG | xargs)") ;;
         v) VERBOSE=1 ;;
         \?) show_usage
             exit 1
@@ -143,16 +145,12 @@ LOG=$(basename "$LOG")
 
 DEBUG=${DEBUG:-0}
 
-options=()
 options+=(-o /dev/null)
 options+=(-s)
 options+=(-L)
 options+=($HTTP_VERSION)
 options+=(-H 'Cache-Control: no-cache')
 options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
-if [ $DEBUG -eq 1 ]; then
-  options+=(-D "${LOG_DIRECTORY}/${LOG}")
-fi
 
 for URL in $URLS; do
 

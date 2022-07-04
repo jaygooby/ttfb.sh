@@ -26,6 +26,7 @@
 }
 
 @test "-l logs to specific file" {
+  # skip
   rundir="$(mktemp -d)"
   logdir="$(mktemp -d)"
   pwd="$PWD"
@@ -35,6 +36,7 @@
 }
 
 @test "-l exits if the path the custom log file doesn't exist" {
+  # skip
   rundir="$(mktemp -d)"
   logdir="$(mktemp -d)"
   rmdir "$logdir"
@@ -110,7 +112,6 @@
 @test "-d logs multiple requests to multiple urls to multiple custom log files" {
   # skip
   rundir="$(mktemp -d)"
-  echo $rundir
   pwd="$PWD"
   cd "$rundir" && run "$pwd/ttfb" -n2 -l "$rundir/custom.log" example.com example.com/hello-world
   [ $status -eq 0 ]
@@ -118,4 +119,13 @@
   [ -f "$rundir/example_com_hello_world-custom.log" ]
   [ $(grep " 200 OK" "$rundir/example_com-custom.log" | wc -l) -eq 2 ]
   [ $(grep " 404 Not Found" "$rundir/example_com_hello_world-custom.log" | wc -l) -eq 2 ]
+}
+
+@test "pass custom curl options via our -o option" {
+  # This test passes -k to curl, so it can successfully
+  # call https://self-signed.badssl.com which has a self-signed certificate
+  # which would normally result in a fail
+  # skip
+  run "$pwd/ttfb" -o "-k" https://self-signed.badssl.com
+  [[ "$output" != "0" ]]
 }
