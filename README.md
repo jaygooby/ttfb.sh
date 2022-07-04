@@ -2,6 +2,8 @@
 
 Measures [time-to-first-byte](https://en.wikipedia.org/wiki/Time_to_first_byte) for single or multiple URLs. Can show you quickest, slowest & median TTFB values plus optionally log all response headers.
 
+[![Build Status](https://app.travis-ci.com/jaygooby/ttfb.sh.svg?branch=master)](https://app.travis-ci.com/jaygooby/ttfb.sh)
+
 ![Sample run of ttfb.sh](https://github.com/jaygooby/ttfb.sh/raw/readme-assets/demo.gif)
 
 ```
