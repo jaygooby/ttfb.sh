@@ -156,6 +156,14 @@ fi
 
 for URL in $URLS; do
 
+  if [ $DEBUG -eq 1 ]; then
+    if [ ${#@} -gt 1 ]; then
+      LOGFILE="${URL//[^[:alnum:]]/_}"
+      options+=(-D "${LOG_DIRECTORY}/${LOGFILE}-${LOG}")
+    else
+      options+=(-D "${LOG_DIRECTORY}/${LOG}")
+    fi
+  fi
   # if we're checking more than one url
   # output the url on the results line
   if [ ${#@} -gt 1 ]; then
