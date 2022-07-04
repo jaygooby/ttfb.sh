@@ -35,6 +35,13 @@ by https://github.com/sandeepraju
 
 Modified by jay@gooby.org, [@jaygooby](https://twitter.com/jaygooby)
 
+# Installation
+Download the script from the master branch and make it executable:
+```
+curl -LJO https://raw.githubusercontent.com/jaygooby/ttfb.sh/master/ttfb
+chmod +x ./ttfb
+```
+
 # Usage
 
 ```
