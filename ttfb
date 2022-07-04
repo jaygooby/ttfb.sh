@@ -100,14 +100,16 @@ DEBUG=""
 LOG=""
 NUM_REQUESTS=0
 VERBOSE=0
+JSON_BODY=""
 
-while getopts ":n:dl:v" OPTION
+while getopts ":n:dl:vj:" OPTION
 do
     case $OPTION in
         d) DEBUG=1 ;;
         l) LOG="$OPTARG" ;;
         n) NUM_REQUESTS=$OPTARG ;;
         v) VERBOSE=1 ;;
+        j) JSON_BODY="$OPTARG" ;;
         \?) show_usage
             exit 1
             ;;
@@ -152,6 +154,11 @@ options+=(-H 'Cache-Control: no-cache')
 options+=(-w 'echo DNS lookup: %{time_namelookup} TLS handshake: %{time_appconnect} TTFB including connection: %{time_starttransfer} TTFB: $(echo %{time_starttransfer} - %{time_appconnect} | bc) Total time: %{time_total} \n')
 if [ $DEBUG -eq 1 ]; then
   options+=(-D "${LOG_DIRECTORY}/${LOG}")
+fi
+
+if [ -z "${JSON_BODY}" ]; then
+  options+=(-H 'Content-Type: application/json')
+  options+=(-d "${JSON_BODY}")
 fi
 
 for URL in $URLS; do
