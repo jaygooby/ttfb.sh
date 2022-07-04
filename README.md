@@ -11,6 +11,7 @@ Usage: ttfb [options] url [url...]
 	-d debug
 	-l <log file> (infers -d) log response headers. Defaults to ./curl.log
 	-n <number> of times to test time to first byte
+	-o <option> pass options to curl (e.g. -o "-k" will make curl ignore invalid certificates)
 	-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)
 ```
 
