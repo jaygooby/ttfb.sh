@@ -92,7 +92,7 @@ median() {
 }
 
 show_usage() {
-  echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to ./curl.log\n\t-n <number> of times to test time to first byte\n\t-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)" >&2
+  echo -e "Usage: ttfb [options] url [url...]\n\t-d debug\n\t-l <log file> (infers -d) log response headers. Defaults to ./curl.log\n\t-n <number> of times to test time to first byte\n\t-o <option> pass options to curl (e.g. -o \"-k\" will make curl ignore invalid certificates)\n\t-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)" >&2
 }
 
 # defaults

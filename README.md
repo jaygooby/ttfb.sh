@@ -44,6 +44,7 @@ Usage: ttfb [options] url [url...]
 	-d debug
 	-l <log file> (infers -d) log response headers. Defaults to ./curl.log
 	-n <number> of times to test time to first byte
+	-o <option> pass options to curl (e.g. -o "-k" will make curl ignore invalid certificates)
 	-v verbose output. Show response breakdown (DNS lookup, TLS handshake etc)
 ```
 
@@ -167,6 +168,8 @@ on `bc` and `column` commands.
 # TODO
 
   * [x] Show progress when more than one request (`-n 2` etc) option is set
+
+	* [x] Allow custom options to be passed to curl (use the `-o` option)
 
   * [ ] Sort output by fastest TTFB when multiple URLs are supplied
 
