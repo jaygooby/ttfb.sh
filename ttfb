@@ -156,7 +156,7 @@ if [ $DEBUG -eq 1 ]; then
   options+=(-D "${LOG_DIRECTORY}/${LOG}")
 fi
 
-if [ -z "${JSON_BODY}" ]; then
+if [ ! -z "${JSON_BODY}" ]; then
   options+=(-H 'Content-Type: application/json')
   options+=(-d "${JSON_BODY}")
 fi
