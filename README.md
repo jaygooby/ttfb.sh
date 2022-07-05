@@ -175,11 +175,13 @@ on `bc` and `column` commands.
 
 # Testing
 
-If you'd like to submit a [PR](https://github.com/jaygooby/ttfb.sh/pulls), please add a test in the [test suite](https://github.com/jaygooby/ttfb.sh/blob/master/tests/tests.bats).
+If you'd like to submit a [PR](https://github.com/jaygooby/ttfb.sh/pulls), please ensure all existing tests pass and if it adds new functionality, add a test in the [test suite](https://github.com/jaygooby/ttfb.sh/blob/master/tests/tests.bats).
 
 To run the tests, call `make` from the project root. You'll need to have [bats-core](https://github.com/bats-core/bats-core) installed and in your `$PATH`.
 
-If you only want to run a test or two, uncomment the `# skip` lines, so they read `skip` and then those tests will be skipped.
+If you only want to run a test or two, uncomment the `# skip` lines on the tests you don't care about, so they read `skip`, and then those tests will be skipped.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more details.
 
 # TODO
 
